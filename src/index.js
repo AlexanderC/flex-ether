@@ -210,21 +210,21 @@ async function getFirstAccount(web3) {
 }
 
 function wrapSendTxPromise(promise) {
-	// Resolved receipt object.
-	let receipt = undefined;
-	// Number of confirmations seen.
-	let confirmations = 0;
-	// Count confirmations.
-	promise.then(({sent}) => {
-		const handler = (n, _receipt) => {
-			receipt = _receipt;
-			confirmations = Math.max(confirmations, n);
-			// Don't listen beyond 12 confirmations.
-			if (n >= 12)
-				sent.removeAllListeners();
-		};
-		sent.on('confirmation', handler);
-	});
+// 	// Resolved receipt object.
+// 	let receipt = undefined;
+// 	// Number of confirmations seen.
+// 	let confirmations = 0;
+// 	// Count confirmations.
+// 	promise.then(({sent}) => {
+// 		const handler = (n, _receipt) => {
+// 			receipt = _receipt;
+// 			confirmations = Math.max(confirmations, n);
+// 			// Don't listen beyond 12 confirmations.
+// 			if (n >= 12)
+// 				sent.removeAllListeners();
+// 		};
+// 		sent.on('confirmation', handler);
+// 	});
 	// Create a promise that resolves with the receipt.
 	const wrapper = new Promise(async (accept, reject) => {
 		promise.catch(reject);
@@ -258,10 +258,10 @@ function wrapSendTxPromise(promise) {
 				return wrapper.receipt;
 			if (count > 12)
 				throw new Error('Maximum confirmations is 12.');
-			// If we've already seen the confirmation, resolve immediately.
-			if (confirmations >= count && receipt) {
-				return Promise.resolve(receipt);
-			}
+// 			// If we've already seen the confirmation, resolve immediately.
+// 			if (confirmations >= count && receipt) {
+// 				return Promise.resolve(receipt);
+// 			}
 			// Create a promise that'll get called by the confirmation handler.
 			return new Promise((accept, reject) => {
 				promise.catch(reject);
