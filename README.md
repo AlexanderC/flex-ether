@@ -64,11 +64,10 @@ eth = new FlexEther(
       // May be 'main', 'ropsten', 'rinkeby', or 'kovan'.
       // Defaults to 'main'
       network: String,
-      // Infura API Key to use.
-      // One will be generated if not defined.
+      // Infura Project ID, if not using a custom provider.
       infuraKey: String,
       // Connect to an existing provider at a URI
-      // (e.g., http://localhost:8545 or https://mainnet.infura.io/YOURAPIKEY).
+      // (e.g., http://localhost:8545 or https://mainnet.infura.io/v3/PROJECT_ID).
       // The 'net' option is required is using an IPC path.
       providerURI: String,
       // net instance, from require('net'), if using IPC path in providerURI
@@ -297,5 +296,4 @@ change. Many of these can also be overridden in individual call options.
 ### Module Properties
 The following module properties affect gas calculations for all instances:
 
-- `MAX_GAS` Maximum gas limit for transactions. Defaults to `6721975`.
 - `MAX_GAS_PRICE` Maximum gas price for transactions. Defaults to `256` gwei.

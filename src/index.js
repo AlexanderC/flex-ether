@@ -97,10 +97,8 @@ module.exports = class FlexEther {
 	}
 };
 
-module.exports.MAX_GAS = 6721975;
-module.exports.MAX_GAS_PRICE = new BigNumber('256e9').toString(10); // 200 gwei
+module.exports.MAX_GAS_PRICE = new BigNumber('256e9').toString(10); // 256 gwei
 module.exports.ens = ens;
-
 
 function getWeb3(opts={}) {
 	if (opts.web3)
@@ -114,10 +112,18 @@ function getWeb3(opts={}) {
 	return new Web3(provider);
 }
 
+async function getBlockGasLimit(inst) {
+	while (true) {
+		const lastBlock = await inst._web3.eth.getBlock('latest');
+		if (lastBlock != null)
+			return lastBlock.gasLimit
+	}
+}
+
 async function estimateGasRaw(inst, txOpts, bonus) {
 	txOpts = _.assign({}, txOpts, {
 			gasPrice: 1,
-			gasLimit: module.exports.MAX_GAS,
+			gasLimit: await getBlockGasLimit(inst),
 		});
 	bonus = (_.isNumber(bonus) ? bonus : inst.gasBonus) || 0;
 	const gas = await inst._web3.eth.estimateGas(normalizeTxOpts(txOpts));
@@ -127,16 +133,20 @@ async function estimateGasRaw(inst, txOpts, bonus) {
 async function createTransactionOpts(inst, to, opts) {
 	const web3 = inst._web3;
 	let from = undefined;
-	if (opts.from)
+	if (opts.from === null) {
+		// Explicitly leaving it undefined.
+	} else if (_.isString(opts.from)) {
 		from = await inst.resolveAddress(opts.from);
-	else if (opts.key)
+	} else if (_.isNumber(opts.from)) {
+		from = opts.from;
+	} else if (opts.key)
 		from = util.privateKeyToAddress(opts.key);
 	else
 		from = await inst.getDefaultAccount();
 	to = to ? await inst.resolveAddress(to) : undefined;
 	return {
 		gasPrice: opts.gasPrice,
-		gasLimit: opts.gasLimit || opts.gas,
+		gas: opts.gasLimit || opts.gas,
 		value: opts.value || 0,
 		data: opts.data,
 		to: to,
@@ -145,19 +155,21 @@ async function createTransactionOpts(inst, to, opts) {
 }
 
 function normalizeTxOpts(opts) {
-	opts = _.cloneDeep(opts);
-	opts.gasPrice = util.toHex(opts.gasPrice || 0);
-	opts.gasLimit = util.toHex(opts.gasLimit || 0);
-	opts.value = util.toHex(opts.value || 0);
+	const _opts = {};
+	_opts.gasPrice = util.toHex(opts.gasPrice || 0);
+	_opts.gas = util.toHex(opts.gasLimit || opts.gas || 0);
+	_opts.value = util.toHex(opts.value || 0);
+	if (!_.isNil(opts.nonce))
+		_opts.nonce = parseInt(opts.nonce);
 	if (opts.data && opts.data != '0x')
-		opts.data = util.toHex(opts.data);
+		_opts.data = util.toHex(opts.data);
 	else
-		opts.data = '0x';
-	if (opts.to)
-		opts.to = ethjs.toChecksumAddress(opts.to);
-	if (opts.from)
-		opts.from = ethjs.toChecksumAddress(opts.from);
-	return opts;
+		_opts.data = '0x';
+	if (_.isString(opts.to))
+		_opts.to = ethjs.toChecksumAddress(opts.to);
+	if (_.isString(opts.from))
+		_opts.from = ethjs.toChecksumAddress(opts.from);
+	return _opts;
 }
 
 async function callTx(inst, to, opts) {
@@ -166,7 +178,7 @@ async function callTx(inst, to, opts) {
 	const txOpts = await createTransactionOpts(inst, to, opts);
 	_.defaults(txOpts, {
 			gasPrice: 1,
-			gasLimit: module.exports.MAX_GAS
+			gasLimit: await getBlockGasLimit(inst)
 		});
 	if (!txOpts.to && (!txOpts.data || txOpts.data == '0x'))
 		throw Error('Transaction has no destination.');
